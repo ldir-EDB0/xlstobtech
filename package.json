@@ -1,0 +1,52 @@
+{
+  "name": "xlstobtech",
+  "version": "1.0.0",
+  "description": "Convert Excel multicast config sheets to BTech XML probe configs",
+  "main": "xlstobtech.js",
+  "bin": {
+    "xlstobtech": "./xlstobtech.js"
+  },
+  "type": "commonjs",
+  "scripts": {
+    "start": "node xlstobtech.js",
+    "build": "pkg . --targets node18-macos-x64,node18-win-x64,node18-linux-x64",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ldir-EDB0/xlstobtech.git"
+  },
+  "keywords": [
+    "excel",
+    "xml",
+    "btech",
+    "probe",
+    "multicast",
+    "config"
+  ],
+  "author": "Kevin Darbyshire-Bryant",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ldir-EDB0/xlstobtech/issues"
+  },
+  "homepage": "https://github.com/ldir-EDB0/xlstobtech#readme",
+  "dependencies": {
+    "xlsx": "^0.18.5",
+    "xmlbuilder2": "^3.1.1"
+  },
+  "pkg": {
+    "scripts": [
+      "xlstobtech.js"
+    ],
+    "assets": [
+      "*.xlsx"
+    ],
+    "targets": [
+      "node18-macos-x64",
+      "node18-win-x64",
+      "node18-linux-x64"
+    ],
+    "outputPath": "dist"
+  }
+}
+
