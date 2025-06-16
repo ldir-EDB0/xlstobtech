@@ -14,23 +14,23 @@ const xlsx = require('xlsx');
 function parseArgs() {
   const args = process.argv.slice(2);
   let inputFile;
-  let outputDir = 'btechxml';  // Default to btechxml directory
+  let outputDir = 'btechxml';
   let pushProbe = '';
   let pushSheet = '';
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '-x' && i + 1 < args.length) {
       inputFile = args[i + 1];
-      i++;  // Skip the next argument
+      i++;
     } else if (args[i] === '-d' && i + 1 < args.length) {
       outputDir = args[i + 1];
-      i++;  // Skip the next argument
+      i++;
     } else if (args[i] === '-p' && i + 1 < args.length) {
       pushProbe = args[i + 1];
-      i++;  // Skip the next argument
+      i++;
     } else if (args[i] === '-s' && i + 1 < args.length) {
       pushSheet = args[i + 1];
-      i++;  // Skip the next argument
+      i++;
     }
   }
   if (!inputFile || (Boolean(pushProbe) !== Boolean(pushSheet))) {
@@ -100,14 +100,10 @@ function processUnicastSheet(workbook) {
 // Process profiles sheet
 function processProfilesSheet(workbook) {
   const sheet = workbook.Sheets['profiles'];
-  if (!sheet) {
-    throw new Error('⚠️  Error: "profiles" sheet not found, I need some data from it.');
-  }
-
+  if (!sheet) throw new Error('⚠️  Error: "profiles" sheet not found, I need some data from it.');
+  
   const json = xlsx.utils.sheet_to_json(sheet, { defval: '' });
-  if (json.length === 0) {
-    throw new Error('⚠️  Error: "profiles" sheet is empty, I need some data from it.');
-  } 
+  if (json.length === 0) throw new Error('⚠️  Error: "profiles" sheet is empty, I need some data from it.');
 
   const profiles = {};
   
@@ -225,7 +221,6 @@ function wrapXml(multicasts) {
             .ele('mcastnames')
               .ele('mclist', { xmlChildren: 'list' });
 
-  // Add multicast entries directly
   multicasts.forEach(mc =>
     doc.ele('mcastChannel', mc)
   );
