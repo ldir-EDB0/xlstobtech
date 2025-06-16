@@ -4,7 +4,7 @@
     "module": "commonjs",
     "moduleResolution": "node",
     "allowJs": true,
-    "checkJs": true,
+    "checkJs": false,
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "forceConsistentCasingInFileNames": true,
