@@ -79,9 +79,8 @@ function processUnicastSheet(workbook) {
     const Interface = row['INTERFACE'];
     const IPGW = row['IP_PRFX_GW'];
 
-    if (Name && !interfaceNames.includes(Name)) {
-      interfaceNames.push(Name);
-    }
+    if (Name && !interfaceNames.includes(Name)) interfaceNames.push(Name);
+
     if (Name && Interface) {
       const key = `${Name}-${Vlan}`;
       if (!interfaceByNameVlan[key]) {
@@ -293,11 +292,8 @@ async function main() {
     const workbook = xlsx.readFile(inputFile);
     const sheetNames = workbook.SheetNames;
 
-    if (sheetNames.length === 0) {
-      throw new Error('No sheets found in Excel file.');
-    }
+    if (sheetNames.length === 0) throw new Error('No sheets found in Excel file.');
 
-    
     //get the probe names and their interfaces from the unicast sheet
     const { interfaceNames: Probes, interfaceByNameVlan } = processUnicastSheet(workbook);
 
