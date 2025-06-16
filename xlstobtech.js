@@ -62,14 +62,11 @@ or
 // Process unicast sheet and extract interface data
 function processUnicastSheet(workbook) {
   const sheet = workbook.Sheets['unicast'];
-  if (!sheet) {
-    throw new Error('⚠️  Error: "unicast" sheet not found');
-  }
+  if (!sheet) throw new Error('⚠️  Error: "unicast" sheet not found');
 
   let json = xlsx.utils.sheet_to_json(sheet, { defval: '' });
-  if (json.length === 0) {
-    throw new Error('⚠️  Error: "unicast" sheet is empty');
-  }
+  if (json.length === 0) throw new Error('⚠️  Error: "unicast" sheet is empty');
+
 
   const interfaceNames = [];
   const interfaceByNameVlan = {};
