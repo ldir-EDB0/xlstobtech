@@ -126,7 +126,7 @@ function processProfilesSheet(workbook) {
   return profiles;
 }
 
-function buildMcastChannel(name, source_ip, multicast, port, iface, profile, groups, page) {
+function buildMcastChannel(name, source_ip, multicast, port, iface, profile, groups, page, join) {
   return {
     name: name,
     addr: multicast,
@@ -138,7 +138,7 @@ function buildMcastChannel(name, source_ip, multicast, port, iface, profile, gro
     channelOrder: profile.channelorder,
     joinIfaceName: iface,
     ssmAddr: source_ip,
-    join: true,
+    join: join,
     page: page,
     etrEngine: "1",
     extractThumbs: true,
@@ -187,14 +187,14 @@ function processSheet(workbook, sheetName, probe, interfaceByNameVlan, profiles)
     if (iface_a && source_ip_a && multicast_a) {
       const mname = source_ip_b ? `${name}@A` : `${name}`;
 
-      multicasts.push(buildMcastChannel(mname, source_ip_a, multicast_a, profile.port_no_a, iface_a.Interface, profile, groups, page));
+      multicasts.push(buildMcastChannel(mname, source_ip_a, multicast_a, profile.port_no_a, iface_a.Interface, profile, groups, page, join));
     }
 
     //B leg
     if (iface_b && source_ip_b && multicast_b) {
       const mname = source_ip_a ? `${name}@B` : `${name}`;
 
-      multicasts.push(buildMcastChannel(mname, source_ip_b, multicast_b, profile.port_no_b, iface_b.Interface, profile, groups, page));
+      multicasts.push(buildMcastChannel(mname, source_ip_b, multicast_b, profile.port_no_b, iface_b.Interface, profile, groups, page, join));
     }
 
     if ((!multicast_a && !multicast_b) || (!source_ip_a && !source_ip_b)) {
