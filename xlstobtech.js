@@ -282,6 +282,20 @@ async function pushConfig(interfaceByNameVlan, probe, sheetName, multicasts) {
   }
 }
 
+function ProcessAllSheets(workbook, sheetNames, Probes, interfaceByNameVlan, profiles, outputDir) {
+  // Produce a config file for each probe from each sheet
+
+      //create base output directory if it doesn't exist
+      fs.mkdirSync(outputDir, { recursive: true });
+
+      for (const sheetName of sheetNames) {
+        for (const probe of Probes) {
+          const multicasts = processSheet(workbook, sheetName, probe, interfaceByNameVlan, profiles);
+          if (multicasts) writeConfigFile(outputDir, probe, sheetName, multicasts);
+        }
+  }
+}
+
 // Main function
 async function main() {
   const skipSheets = new Set(['unicast', 'profiles', 'validation']);
@@ -291,9 +305,9 @@ async function main() {
 
     console.log(`Reading Excel file...`);
     const workbook = xlsx.readFile(inputFile);
-    const sheetNames = workbook.SheetNames;
-
-    if (sheetNames.length === 0) throw new Error('No sheets found in Excel file.');
+    // Exclude sheets in skipSheets from sheetNames
+    const sheetNames = workbook.SheetNames.filter(name => !skipSheets.has(name));
+    if (sheetNames.length === 0) throw new Error('No valid sheets to process in Excel file.');
 
     //get the probe names and their interfaces from the unicast sheet
     const { interfaceNames: Probes, interfaceByNameVlan } = processUnicastSheet(workbook);
@@ -306,11 +320,11 @@ async function main() {
       if (!Probes.includes(pushProbe)) {
         console.error(`❌ Error: Probe "${pushProbe}" not found in unicast sheet.`);
       }
-      if (!sheetNames.includes(pushSheet)) {
-        console.error(`❌ Error: Sheet "${pushSheet}" not found in the workbook.`);
-      }
       if (skipSheets.has(pushSheet)) {
         console.error(`❌ Error: Sheet "${pushSheet}" is not a pushable sheet.`);
+      }
+      else if (!sheetNames.includes(pushSheet)) {
+        console.error(`❌ Error: Sheet "${pushSheet}" not found in the workbook.`);
       }
       
       const multicasts = processSheet(workbook, pushSheet, pushProbe, interfaceByNameVlan, profiles);
@@ -318,20 +332,7 @@ async function main() {
       console.log(`🎉 Processed ${pushSheet} for probe ${pushProbe}.`);
     }
     else {
-      // Process each sheet except 'unicast', 'profiles', and 'validation'
-      // Produce a config file for each probe from each sheet
-
-      //create base output directory if it doesn't exist
-      fs.mkdirSync(outputDir, { recursive: true });
-
-      for (const sheetName of sheetNames) {
-        if (skipSheets.has(sheetName)) continue;
-
-        for (const probe of Probes) {
-          const multicasts = processSheet(workbook, sheetName, probe, interfaceByNameVlan, profiles);
-          if (multicasts) writeConfigFile(outputDir, probe, sheetName, multicasts);
-        }
-      }
+      ProcessAllSheets(workbook, sheetNames, Probes, interfaceByNameVlan, profiles, outputDir);
       console.log(`🎉 All sheets processed.`);
     }
   } catch (err) {
