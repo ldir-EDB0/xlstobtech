@@ -167,6 +167,7 @@ function processSheet(workbook, sheetName, probe, interfaceByNameVlan, profiles)
     const page = row['page'] || '1';
     const name = row['name'] || '';
     const device = row['device'] || '';
+    const join = (row['join'] && row['join'].toString().trim().toLowerCase() === 'no') ? false : true;
     const profileName = row['profile'] || '';
     const source_ip_a = row['source_ip_a'] || '';
     const multicast_a = row['multicast_a'] || '';
