@@ -34,10 +34,8 @@ function parseArgs() {
       i++;
     } else if (args[i] === '-u') {
       pushMode = 'update';
-      i++;
     } else if (args[i] === '-r') {
       pushMode = 'delete';
-      i++;
     }
   }
   if (!inputFile || (Boolean(pushProbe) !== Boolean(pushSheet))) {
