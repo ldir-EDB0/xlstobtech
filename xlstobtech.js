@@ -17,6 +17,7 @@ function parseArgs() {
   let outputDir = 'btechxml';
   let pushProbe = '';
   let pushSheet = '';
+  let pushMode = '';
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '-x' && i + 1 < args.length) {
@@ -30,6 +31,12 @@ function parseArgs() {
       i++;
     } else if (args[i] === '-s' && i + 1 < args.length) {
       pushSheet = args[i + 1];
+      i++;
+    } else if (args[i] === '-u') {
+      pushMode = 'update';
+      i++;
+    } else if (args[i] === '-r') {
+      pushMode = 'delete';
       i++;
     }
   }
@@ -56,7 +63,7 @@ or
   console.log(`Input XLS: ${inputFile}`);
   console.log(`Output directory: ${outputDir}`);
   
-  return { inputFile, outputDir, pushProbe, pushSheet };
+  return { inputFile, outputDir, pushProbe, pushSheet, pushMode };
 }
 
 // Process unicast sheet and extract interface data
@@ -241,7 +248,7 @@ function writeConfigFile(outputDir, probe, sheetName, multicasts) {
 }
 
 // Push config to specified probe
-async function pushConfig(interfaceByNameVlan, probe, sheetName, multicasts) {
+async function pushConfig(interfaceByNameVlan, probe, sheetName, pushMode, multicasts) {
 
   const iface = interfaceByNameVlan[`${probe}-dtv`];
   if (!iface) {
@@ -258,7 +265,7 @@ async function pushConfig(interfaceByNameVlan, probe, sheetName, multicasts) {
 
   const btechxml = wrapXml(multicasts);
 
-  const probeUrl = new URL(`http://${probeIpAddress}/probe/core/importExport/data.xml`);
+  const probeUrl = new URL(pushMode ? `http://${probeIpAddress}/probe/core/importExport/data.xml?mode=${pushMode}` : `http://${probeIpAddress}/probe/core/importExport/data.xml`);
 
   console.log(`📤 Pushing config for ${sheetName} to probe ${probe} at ${probeIpAddress} using URL ${probeUrl}`);
 
@@ -299,7 +306,7 @@ async function main() {
   const skipSheets = new Set(['unicast', 'profiles', 'validation']);
 
   try {
-    const { inputFile, outputDir, pushProbe, pushSheet } = parseArgs();
+    const { inputFile, outputDir, pushProbe, pushSheet, pushMode } = parseArgs();
 
     console.log(`Reading Excel file...`);
     const workbook = xlsx.readFile(inputFile);
@@ -326,7 +333,7 @@ async function main() {
       }
       
       const multicasts = processSheet(workbook, pushSheet, pushProbe, interfaceByNameVlan, profiles);
-      if (multicasts) await pushConfig(interfaceByNameVlan, pushProbe, pushSheet, multicasts);
+      if (multicasts) await pushConfig(interfaceByNameVlan, pushProbe, pushSheet, pushMode, multicasts);
       console.log(`🎉 Processed ${pushSheet} for probe ${pushProbe}.`);
     }
     else {
