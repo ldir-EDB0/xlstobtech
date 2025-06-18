@@ -67,7 +67,6 @@ function processUnicastSheet(workbook) {
   let json = xlsx.utils.sheet_to_json(sheet, { defval: '' });
   if (json.length === 0) throw new Error('⚠️  Error: "unicast" sheet is empty');
 
-
   const interfaceNames = [];
   const interfaceByNameVlan = {};
 
@@ -146,7 +145,6 @@ function buildMcastChannel(name, source_ip, multicast, port, iface, profile, gro
     enableRtcp: true
   };
 }
-
 
 // Process individual sheet and generate multicasts
 function processSheet(workbook, sheetName, probe, interfaceByNameVlan, profiles) {
@@ -285,14 +283,14 @@ async function pushConfig(interfaceByNameVlan, probe, sheetName, multicasts) {
 function ProcessAllSheets(workbook, sheetNames, Probes, interfaceByNameVlan, profiles, outputDir) {
   // Produce a config file for each probe from each sheet
 
-      //create base output directory if it doesn't exist
-      fs.mkdirSync(outputDir, { recursive: true });
+  //create base output directory if it doesn't exist
+  fs.mkdirSync(outputDir, { recursive: true });
 
-      for (const sheetName of sheetNames) {
-        for (const probe of Probes) {
-          const multicasts = processSheet(workbook, sheetName, probe, interfaceByNameVlan, profiles);
-          if (multicasts) writeConfigFile(outputDir, probe, sheetName, multicasts);
-        }
+  for (const sheetName of sheetNames) {
+    for (const probe of Probes) {
+      const multicasts = processSheet(workbook, sheetName, probe, interfaceByNameVlan, profiles);
+      if (multicasts) writeConfigFile(outputDir, probe, sheetName, multicasts);
+    }
   }
 }
 
