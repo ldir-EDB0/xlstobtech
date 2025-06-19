@@ -23,7 +23,7 @@ function parseArgs() {
     if (args[i] === '-x' && i + 1 < args.length) {
       inputFile = args[i + 1];
       i++;
-    } else if (args[i] === '-d' && i + 1 < args.length) {
+    } else if (args[i] === '-o' && i + 1 < args.length) {
       outputDir = args[i + 1];
       i++;
     } else if (args[i] === '-p' && i + 1 < args.length) {
@@ -34,26 +34,26 @@ function parseArgs() {
       i++;
     } else if (args[i] === '-u') {
       pushMode = 'update';
-    } else if (args[i] === '-r') {
+    } else if (args[i] === '-d') {
       pushMode = 'delete';
     }
   }
   if (!inputFile || (Boolean(pushProbe) !== Boolean(pushSheet))) {
     console.log(`
 Usage:
-  node xlstobtech.js -x <input.xls> [ [-d <output-folder>] || -p <probe> -s <sheet> ]
+  node xlstobtech.js -x <input.xls> [ [-o <output-folder>] || -p <probe> -s <sheet> ]
 
 Options:
   -x <file>      Excel file to process (required)
 
-  -d <folder>    Output directory (optional, defaults to btechxml)
+  -o <folder>    Output directory (optional, defaults to btechxml)
 or
   -s <sheet>     Specify sheet to push
   -p <probe>     Push specified sheet to probe
 
   Examples:
   node xlstobtech.js -x input.xlsx
-  node xlstobtech.js -x input.xls -d ./configs
+  node xlstobtech.js -x input.xls -o ./configs
 `);
     process.exit(0);
   }
@@ -151,6 +151,28 @@ function buildMcastChannel(name, source_ip, multicast, port, iface, profile, gro
   };
 }
 
+function buildMcastChannelDel(name, source_ip, multicast, port, iface, profile, groups, page, join) {
+  return {
+    name: name,
+//    addr: multicast,
+//    port: port,
+//    sessionId: "0",
+//    groups: groups,
+//    audiodepth: profile.audiodepth,
+//    audiosr: profile.audiosr,
+//    channelOrder: profile.channelorder,
+//    joinIfaceName: iface,
+//    ssmAddr: source_ip,
+//    join: join,
+//    page: page,
+//    etrEngine: "1",
+//    extractThumbs: true,
+//    enableFec: false,
+//    enableRtcp: true
+  };
+}
+
+
 // Process individual sheet and generate multicasts
 function processSheet(workbook, sheetName, probe, interfaceByNameVlan, profiles) {
   console.log(`🔄 Processing sheet: ${sheetName}`);
@@ -190,14 +212,16 @@ function processSheet(workbook, sheetName, probe, interfaceByNameVlan, profiles)
     if (iface_a && source_ip_a && multicast_a) {
       const mname = source_ip_b ? `${name}@A` : `${name}`;
 
-      multicasts.push(buildMcastChannel(mname, source_ip_a, multicast_a, profile.port_no_a, iface_a.Interface, profile, groups, page, join));
+      multicasts.push(pushMode !== 'delete' ? buildMcastChannel(mname, source_ip_a, multicast_a, profile.port_no_a, iface_a.Interface, profile, groups, page, join)
+                                            : buildMcastChannelDel(mname, source_ip_a, multicast_a, profile.port_no_a, iface_a.Interface, profile, groups, page, join));
     }
 
     //B leg
     if (iface_b && source_ip_b && multicast_b) {
       const mname = source_ip_a ? `${name}@B` : `${name}`;
 
-      multicasts.push(buildMcastChannel(mname, source_ip_b, multicast_b, profile.port_no_b, iface_b.Interface, profile, groups, page, join));
+      multicasts.push(pushMode !== 'delete' ? buildMcastChannel(mname, source_ip_b, multicast_b, profile.port_no_b, iface_b.Interface, profile, groups, page, join)
+                                            : buildMcastChannelDel(mname, source_ip_b, multicast_b, profile.port_no_b, iface_b.Interface, profile, groups, page, join));
     }
 
     if ((!multicast_a && !multicast_b) || (!source_ip_a && !source_ip_b)) {
@@ -263,7 +287,8 @@ async function pushConfig(interfaceByNameVlan, probe, sheetName, pushMode, multi
 
   const btechxml = wrapXml(multicasts);
 
-  const probeUrl = new URL(pushMode ? `http://${probeIpAddress}/probe/core/importExport/data.xml?mode=${pushMode}` : `http://${probeIpAddress}/probe/core/importExport/data.xml`);
+  const probeUrl = new URL(pushMode ? `http://${probeIpAddress}/probe/core/importExport/data.xml?mode=${pushMode}`
+                                    : `http://${probeIpAddress}/probe/core/importExport/data.xml`);
 
   console.log(`📤 Pushing config for ${sheetName} to probe ${probe} at ${probeIpAddress} using URL ${probeUrl}`);
 
