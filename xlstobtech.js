@@ -355,7 +355,7 @@ async function main() {
         console.error(`❌ Error: Sheet "${pushSheet}" not found in the workbook.`);
       }
       
-      const multicasts = processSheet(workbook, pushSheet, pushProbe, interfaceByNameVlan, profiles);
+      const multicasts = processSheet(workbook, pushSheet, pushMode, pushProbe, interfaceByNameVlan, profiles);
       if (multicasts) await pushConfig(interfaceByNameVlan, pushProbe, pushSheet, pushMode, multicasts);
       console.log(`🎉 Processed ${pushSheet} for probe ${pushProbe}.`);
     }
