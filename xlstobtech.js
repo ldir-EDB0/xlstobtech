@@ -212,16 +212,20 @@ function processSheet(workbook, sheetName, pushMode, probe, interfaceByNameVlan,
     if (iface_a && source_ip_a && multicast_a) {
       const mname = source_ip_b ? `${name}@A` : `${name}`;
 
-      multicasts.push(pushMode !== 'delete' ? buildMcastChannel(mname, source_ip_a, multicast_a, profile.port_no_a, iface_a.Interface, profile, groups, page, join)
-                                            : buildMcastChannelDel(mname, source_ip_a, multicast_a, profile.port_no_a, iface_a.Interface, profile, groups, page, join));
+      multicasts.push(pushMode === 'delete'
+        ? buildMcastChannelDel(mname, source_ip_a, multicast_a, profile.port_no_a, iface_a.Interface, profile, groups, page, join)
+        : buildMcastChannel(mname, source_ip_a, multicast_a, profile.port_no_a, iface_a.Interface, profile, groups, page, join)
+      );
     }
 
     //B leg
     if (iface_b && source_ip_b && multicast_b) {
       const mname = source_ip_a ? `${name}@B` : `${name}`;
 
-      multicasts.push(pushMode !== 'delete' ? buildMcastChannel(mname, source_ip_b, multicast_b, profile.port_no_b, iface_b.Interface, profile, groups, page, join)
-                                            : buildMcastChannelDel(mname, source_ip_b, multicast_b, profile.port_no_b, iface_b.Interface, profile, groups, page, join));
+      multicasts.push(pushMode === 'delete'
+        ? buildMcastChannelDel(mname, source_ip_b, multicast_b, profile.port_no_b, iface_b.Interface, profile, groups, page, join)
+        : buildMcastChannel(mname, source_ip_b, multicast_b, profile.port_no_b, iface_b.Interface, profile, groups, page, join)
+      );
     }
 
     if ((!multicast_a && !multicast_b) || (!source_ip_a && !source_ip_b)) {
