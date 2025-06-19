@@ -174,7 +174,7 @@ function buildMcastChannelDel(name, source_ip, multicast, port, iface, profile, 
 
 
 // Process individual sheet and generate multicasts
-function processSheet(workbook, sheetName, probe, interfaceByNameVlan, profiles) {
+function processSheet(workbook, sheetName, pushMode, probe, interfaceByNameVlan, profiles) {
   console.log(`🔄 Processing sheet: ${sheetName}`);
   const sheet = workbook.Sheets[sheetName];
   const json = xlsx.utils.sheet_to_json(sheet, { defval: '' });
@@ -310,7 +310,7 @@ async function pushConfig(interfaceByNameVlan, probe, sheetName, pushMode, multi
   }
 }
 
-function ProcessAllSheets(workbook, sheetNames, Probes, interfaceByNameVlan, profiles, outputDir) {
+function ProcessAllSheets(workbook, sheetNames, pushMode, Probes, interfaceByNameVlan, profiles, outputDir) {
   // Produce a config file for each probe from each sheet
 
   //create base output directory if it doesn't exist
@@ -318,7 +318,7 @@ function ProcessAllSheets(workbook, sheetNames, Probes, interfaceByNameVlan, pro
 
   for (const sheetName of sheetNames) {
     for (const probe of Probes) {
-      const multicasts = processSheet(workbook, sheetName, probe, interfaceByNameVlan, profiles);
+      const multicasts = processSheet(workbook, sheetName, pushMode, probe, interfaceByNameVlan, profiles);
       if (multicasts) writeConfigFile(outputDir, probe, sheetName, multicasts);
     }
   }
@@ -360,7 +360,7 @@ async function main() {
       console.log(`🎉 Processed ${pushSheet} for probe ${pushProbe}.`);
     }
     else {
-      ProcessAllSheets(workbook, sheetNames, Probes, interfaceByNameVlan, profiles, outputDir);
+      ProcessAllSheets(workbook, sheetNames, pushMode, Probes, interfaceByNameVlan, profiles, outputDir);
       console.log(`🎉 All sheets processed.`);
     }
   } catch (err) {
