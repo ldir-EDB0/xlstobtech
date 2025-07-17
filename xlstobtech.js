@@ -26,14 +26,13 @@ const ip = require('ip');
 const { XMLParser, XMLBuilder } = require('fast-xml-parser');
 
 // Parse command line arguments
-// Returns an object with inputFile, outputDir, pushProbe, pushSheet, and pushMode
+// Returns an object with inputFile, outputDir, pushProbe, pushSheets[], and pushMode
 function parseArgs() {
   const args = process.argv.slice(2);
   let inputFile;
   let outputDir = 'btechxml';
   let pushProbe = '';
-  let pushSheet = '';
-  let pushMode = '';
+  let pushSheets = [];
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '-x' && i + 1 < args.length) {
@@ -46,43 +45,46 @@ function parseArgs() {
       pushProbe = args[i + 1];
       i++;
     } else if (args[i] === '-s' && i + 1 < args.length) {
-      pushSheet = args[i + 1];
+      pushSheets.push(args[i + 1]);
       i++;
-    } else if (args[i] === '-a') {
-      pushMode = 'add';
-    } else if (args[i] === '-u') {
-      pushMode = 'update';
-    } else if (args[i] === '-r') {
-      pushMode = 'delete';
     }
   }
-  if (!inputFile || (Boolean(pushProbe) !== Boolean(pushSheet))) {
+
+  // Validation: inputFile required; if pushing, probe and at least one sheet are required
+  if (!inputFile || (pushProbe && pushSheets.length === 0) || (!pushProbe && pushSheets.length > 0)) {
     console.log(`
 Usage:
-  node xlstobtech.js -x <input.xls> [ [-d <output-folder>] || -p <probe> -s <sheet> ]
+  node xlstobtech.js -x <input.xls> [ [-d <output-folder>] || -p <probe> -s <sheet> [-s <sheet2> ...] ]
 
 Options:
   -x <file>      Excel file to process (required)
 
   -d <folder>    Output directory (optional, defaults to btechxml)
 or
-  -s <sheet>     Specify sheet to push
-  -p <probe>     Push specified sheet to probe
+  -s <sheet>     Specify sheet(s) to push (can be repeated)
+  -p <probe>     Push specified sheet(s) to probe
 
   Examples:
   node xlstobtech.js -x input.xlsx
   node xlstobtech.js -x input.xls -d ./configs
+  node xlstobtech.js -x input.xls -p some_probe -s Sheet1 -s Sheet2
 `);
     process.exit(0);
   }
 
   console.log(`Input XLS: ${inputFile}`);
   console.log(`Output directory: ${outputDir}`);
-  
-  return { inputFile, outputDir, pushProbe, pushSheet, pushMode };
+  if (pushSheets.length > 0) {
+    console.log(`Push probe: ${pushProbe}`);
+    console.log(`Push sheets: ${pushSheets.join(', ')}`);
+    console.log(`Push mode: ${pushMode || 'default'}`);
+  }
+
+  return { inputFile, outputDir, pushProbe, pushSheets};
 }
 
 // fetch and parse the probe's current multicast channels
+// this isn't used but I can't bear to delete it yet
 // returns a dictionary of channels by name, or null if none found
 async function fetchAndStoreMcastChannels(xmlUrl) {
   const mcastChannelsByName = {};
@@ -294,12 +296,12 @@ function processSheet(workbook, sheetName, probe, interfaceByNameVlan, profiles)
     const device = row['device'] || '';
     const join = (row['join'] && row['join'].toString().trim().toLowerCase() === 'no') ? false : true;
     const profileName = row['profile'] || '';
-    const source_ip_a = row['source_ip_a'] || '';
-    const multicast_a = row['multicast_a'] || '';
-    const vlan_a = row['vlan_a'] || 'dff-a';
-    const source_ip_b = row['source_ip_b'] || '';
-    const multicast_b = row['multicast_b'] || '';
-    const vlan_b = row['vlan_b'] || 'dff-b';
+    const source_ip_a = row['source_ip_a'].toString().trim() || '';
+    const multicast_a = row['multicast_a'].toString().trim() || '';
+    const vlan_a = row['vlan_a'].toString().trim() || 'dff-a';
+    const source_ip_b = row['source_ip_b'].toString().trim() || '';
+    const multicast_b = row['multicast_b'].toString().trim() || '';
+    const vlan_b = row['vlan_b'].toString().trim() || 'dff-b';
 
     // Lookup profile data
     const profile = profiles[profileName] || {};
@@ -379,6 +381,7 @@ function wrapXml(multicasts) {
 function writeConfigFile(outputDir, probe, sheetName, multicasts) {
 
   const btechxml = wrapXml(multicasts);
+
   const safeSheetName = sheetName.replace(/[ \\/:*?"<>|]/g, '_');
   const safeprobe = probe.replace(/[ \\/:*?"<>|]/g, '_');
   const probeoutputDir = path.join(outputDir, safeprobe);
@@ -392,7 +395,7 @@ function writeConfigFile(outputDir, probe, sheetName, multicasts) {
 // Get the URL for the probe's import/export endpoint
 // returns a URL object or null if the interface is not found
 // the dtv interface is used for pushing config to the probe
-function getProbeUrl(interfaceByNameVlan, probe, pushMode) {
+function getProbeUrl(interfaceByNameVlan, probe) {
   const iface = interfaceByNameVlan[`${probe}-dtv`];
   if (!iface) {
     console.error(`❌ Error: DTV Interface for probe "${probe}" not found.`);
@@ -402,21 +405,20 @@ function getProbeUrl(interfaceByNameVlan, probe, pushMode) {
     console.error(`❌ Error: Host IP for probe "${probe}" is not defined.`);
     return null;
   }
-  return new URL(pushMode ? `http://${iface.hostIP}/probe/core/importExport/data.xml?mode=${pushMode}`
-    : `http://${iface.hostIP}/probe/core/importExport/data.xml`);
+  return new URL(`http://${iface.hostIP}/probe/core/importExport/data.xml`);
 }
 
 // Push config to specified probe
 // get the URL for the probe's import/export endpoint, generate the XML from multicasts
 // and POST it to the probe
-async function pushConfig(interfaceByNameVlan, probe, sheetName, pushMode, multicasts) {
+async function pushConfig(interfaceByNameVlan, probe, multicasts) {
 
-  const probeUrl = getProbeUrl(interfaceByNameVlan, probe, pushMode);
+  const probeUrl = getProbeUrl(interfaceByNameVlan, probe);
   if (!probeUrl) return;
 
   const btechxml = wrapXml(multicasts);
 
-  console.log(`📤 Pushing config for ${sheetName} to probe ${probe} using URL ${probeUrl}`);
+  console.log(`📤 Pushing config to probe ${probe} using URL ${probeUrl}`);
 
   try {
     const res = await fetch(probeUrl, {
@@ -452,42 +454,13 @@ function ProcessAllSheets(workbook, sheetNames, Probes, interfaceByNameVlan, pro
   }
 }
 
-// in progress this one
-async function updelConfig(interfaceByNameVlan, probe, sheetName, pushMode, multicasts) {
-  const probeUrl = getProbeUrl(interfaceByNameVlan, probe, '');
-  if (!probeUrl) return;
-
-  const currentChannelsByName = await fetchAndStoreMcastChannels(probeUrl.href);
-
-  if (pushMode === 'delete' && currentChannelsByName) {
-    // remove channels that are in the sheet and in the current channels
-    // determine matching channels by multicast name
-    // if the name is in the current channel then use the tuningId to delete it
-    const toDelete = [];
-    for (const mc of multicasts) {
-      const current = currentChannelsByName[mc.name];
-      if (current && current.tuningId) {
-        toDelete.push({ tuningId: current.tuningId });
-      }
-    }
-
-    if (toDelete.length > 0) {
-      console.log(`🔄 Deleting ${toDelete.length} channels from probe ${probe}...`);
-      await pushConfig(interfaceByNameVlan, pushProbe, pushSheet, pushMode, toDelete);
-      
-    } else {
-      console.log(`No channels to delete for probe ${probe}.`);
-    }
-  }
-
-}
-
 // Main function
 async function main() {
   const skipSheets = new Set(['unicast', 'profiles', 'validation']);
 
+  let allmulticasts = [];
   try {
-    const { inputFile, outputDir, pushProbe, pushSheet, pushMode } = parseArgs();
+    const { inputFile, outputDir, pushProbe, pushSheets } = parseArgs();
 
     console.log(`Reading Excel file...`);
     const workbook = xlsx.readFile(inputFile);
@@ -501,36 +474,30 @@ async function main() {
     //get audio/video profiles from the profiles sheet
     const profiles = processProfilesSheet(workbook);
 
-    // If pushProbe and pushSheet are specified, process only that sheet for the probe
-    if (pushProbe && pushSheet) {
+    // If pushProbe and pushSheets are specified, process only those sheets for the probe
+    if (pushProbe && pushSheets) {
       if (!Probes.includes(pushProbe)) {
         console.error(`❌ Error: Probe "${pushProbe}" not found in unicast sheet.`);
       }
-      if (skipSheets.has(pushSheet)) {
-        console.error(`❌ Error: Sheet "${pushSheet}" is not a pushable sheet.`);
-      }
-      else if (!sheetNames.includes(pushSheet)) {
-        console.error(`❌ Error: Sheet "${pushSheet}" not found in the workbook.`);
+
+      for (const pushSheet of pushSheets) {
+        if (skipSheets.has(pushSheet)) {
+          console.error(`❌ Error: Sheet "${pushSheet}" is not a pushable sheet.`);
+        } else if (!sheetNames.includes(pushSheet)) {
+          console.error(`❌ Error: Sheet "${pushSheet}" not found in the workbook.`);
+        }
+
+        const multicasts = processSheet(workbook, pushSheet, pushProbe, interfaceByNameVlan, profiles);
+        if (!multicasts || multicasts.length === 0) {
+         console.warn(`⚠️  No valid multicasts found in sheet "${pushSheet}" for probe "${pushProbe}".`);
+        } else {
+          allmulticasts.push(...multicasts);
+        }
       }
 
-      const multicasts = processSheet(workbook, pushSheet, pushProbe, interfaceByNameVlan, profiles);
-      if (!multicasts || multicasts.length === 0) {
-        console.warn(`⚠️  No valid multicasts found in sheet "${pushSheet}" for probe "${pushProbe}".`);
-      } else {
-        if (pushMode === 'add') {
-          console.log(`🔄 Pushing add mode for sheet "${pushSheet}" to probe "${pushProbe}"...`);
-          if (multicasts) await pushConfig(interfaceByNameVlan, pushProbe, pushSheet, 'update', multicasts);
-          console.log(`🎉 Processed ${pushSheet} for probe ${pushProbe}.`);
-        } else if (pushMode === 'update' || pushMode === 'delete') {
-          console.log(`🔄 Pushing ${pushMode} mode for sheet "${pushSheet}" to probe "${pushProbe}" not yet supported...`);
-          if (multicasts) await updelConfig(interfaceByNameVlan, pushProbe, pushSheet, pushMode, multicasts);
-          console.log(`🎉 Processed ${pushSheet} for probe ${pushProbe}.`);
-        } else {
-          // Default: overwrite (load)
-          console.log(`🔄 Pushing overwrite (load) mode for sheet "${pushSheet}" to probe "${pushProbe}"...`);
-          if (multicasts) await pushConfig(interfaceByNameVlan, pushProbe, pushSheet, '', multicasts);
-          console.log(`🎉 Processed ${pushSheet} for probe ${pushProbe}.`);
-        }
+      if (allmulticasts.length > 0) {
+        console.log(`🔄 Pushing multicasts to probe "${pushProbe}"...`);
+        await pushConfig(interfaceByNameVlan, pushProbe, allmulticasts);
       }
     } else { // Process all sheets for all probes
       ProcessAllSheets(workbook, sheetNames, Probes, interfaceByNameVlan, profiles, outputDir);
