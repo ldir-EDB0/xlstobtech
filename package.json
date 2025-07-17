@@ -33,6 +33,7 @@
   "dependencies": {
     "fast-xml-parser": "^5.2.5",
     "ip": "^2.0.1",
+    "node-fetch": "^2.7.0",
     "xlsx": "^0.18.5"
   },
   "pkg": {

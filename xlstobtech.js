@@ -23,6 +23,7 @@ const fs = require('fs');
 const path = require('path');
 const xlsx = require('xlsx');
 const ip = require('ip');
+const fetch = require('node-fetch');
 const { XMLParser, XMLBuilder } = require('fast-xml-parser');
 
 // Parse command line arguments
@@ -77,7 +78,6 @@ or
   if (pushSheets.length > 0) {
     console.log(`Push probe: ${pushProbe}`);
     console.log(`Push sheets: ${pushSheets.join(', ')}`);
-    console.log(`Push mode: ${pushMode || 'default'}`);
   }
 
   return { inputFile, outputDir, pushProbe, pushSheets};
@@ -496,7 +496,6 @@ async function main() {
       }
 
       if (allmulticasts.length > 0) {
-        console.log(`🔄 Pushing multicasts to probe "${pushProbe}"...`);
         await pushConfig(interfaceByNameVlan, pushProbe, allmulticasts);
       }
     } else { // Process all sheets for all probes
