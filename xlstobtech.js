@@ -260,6 +260,7 @@ function buildMcastChannel(name, source_ip, multicast, port, iface, profile, gro
     port: port,
     sessionId: "0",
     groups: groups,
+    content: profile.content,
     audiodepth: profile.audiodepth,
     audiosr: profile.audiosr,
     channelOrder: profile.channelorder,
@@ -290,11 +291,14 @@ function processSheet(workbook, sheetName, probe, interfaceByNameVlan, profiles)
   let skipped = 0;
 
   for (const row of json) {
+    const join = (row['join'] && row['join'].toString().trim().toLowerCase() === 'no') ? false : true;
+    if (!join) {
+      continue;
+    }
     const groups = row['groups'] || '';
     const page = row['page'] || '1';
     const name = row['name'] || '';
     const device = row['device'] || '';
-    const join = (row['join'] && row['join'].toString().trim().toLowerCase() === 'no') ? false : true;
     const profileName = row['profile'] || '';
     const source_ip_a = row['source_ip_a'].toString().trim() || '';
     const multicast_a = row['multicast_a'].toString().trim() || '';
@@ -326,7 +330,6 @@ function processSheet(workbook, sheetName, probe, interfaceByNameVlan, profiles)
 
     if ((!multicast_a && !multicast_b) || (!source_ip_a && !source_ip_b)) {
       skipped++;
-      continue;
     }
   }
 
